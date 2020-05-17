@@ -47,3 +47,4 @@ class DQNAgent(agent.Agent):
 
 		self.opt.step()
 		return loss.item()
+

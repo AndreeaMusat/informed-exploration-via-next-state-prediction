@@ -23,10 +23,10 @@ class MemoryReplay(object):
 		batch = random.sample(self.buffer, min(batch_size, len(self.buffer)))
 		curr_states, actions, rewards, next_states, dones = zip(*batch)
 
-		curr_states = torch.Tensor(curr_states).to(self.config['device']).double()
-		actions = torch.Tensor(actions).to(self.config['device']).long()
-		rewards = torch.Tensor(rewards).to(self.config['device']).double()
-		next_states = torch.Tensor(next_states).to(self.config['device']).double()
-		dones = torch.Tensor(dones).to(self.config['device']).double()
+		curr_states = torch.Tensor(curr_states).double().to(self.config['device'])
+		actions = torch.Tensor(actions).long().to(self.config['device'])
+		rewards = torch.Tensor(rewards).double().to(self.config['device'])
+		next_states = torch.Tensor(next_states).double().to(self.config['device'])
+		dones = torch.Tensor(dones).double().to(self.config['device'])
 
 		return curr_states, actions, rewards, next_states, dones
