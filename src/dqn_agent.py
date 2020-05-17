@@ -13,6 +13,7 @@ class DQNAgent(agent.Agent):
   def __init__(self, config):
     self.config = config
     self.q_net = dqn.QNetwork(self.config).double()
+    self.q_net = self.q_net.to(self.config['device'])
     self.memory = memory_replay.MemoryReplay(self.config)
     self.opt = torch.optim.Adam(self.q_net.parameters(), 
                   self.config['learning_rate'])
