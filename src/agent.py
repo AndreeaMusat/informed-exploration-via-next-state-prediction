@@ -4,7 +4,7 @@ import numpy as np
 
 class Agent(object):
 	@abstractmethod
-	def get_action(self, state):
+	def act(self, state):
 		pass
 
 	@abstractmethod
