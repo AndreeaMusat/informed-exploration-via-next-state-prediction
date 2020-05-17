@@ -20,7 +20,7 @@ class DQNAgent(agent.Agent):
 
   def act(self, state):
     state = np.array(state).transpose(2, 0, 1)[None, :] / 255.0
-    state = torch.Tensor(state).double()
+    state = torch.Tensor(state).double().to(self.config['device'])
 
     if np.random.random() > self.config['eps']:
       return torch.max(self.q_net(state), 1).indices[0].item()
