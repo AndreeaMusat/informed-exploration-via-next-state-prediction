@@ -11,23 +11,27 @@ from atari_wrappers import wrap_deepmind
 from dqn_agent import DQNAgent
 from utils import *
 
-
 root_path = mount_drive()
 
-env = gym.make('Pong-v0')
-env = wrap_deepmind(env, frame_stack=True, scale=True)
-num_actions = env.action_space.n
-config = get_default_config(num_actions)
-agent = DQNAgent(config)
+restore_from_checkpoint = False
+if not restore_from_checkpoint:
+  agent = DQNAgent(get_default_config())
+  loss_hist = []
+  avg_rewards = []
+else:
+  checkpoint_fname = 'TODO_checkpoint_file'
+  checkpoint = load_from_checkpoint(checkpoint_fname)
+  agent, loss_hist, avg_rewards = checkpoint
+
+
+env = wrap_deepmind(gym.make('Pong-v0'), 
+                    frame_stack=True, 
+                    scale=True)
 
 crt_num_episodes = 0
 crt_ep_reward = 0.0
 total_rewards = 0.0
 render = False
-
-
-loss_hist = []
-avg_rewards = []
 
 i = 0
 while agent.config['episodes_left']:
@@ -49,7 +53,7 @@ while agent.config['episodes_left']:
     obs = new_obs
     crt_ep_reward += reward
 
-    if len(agent.memory.buffer) >= 5000:
+    if len(agent.memory.buffer) >= 50:
       loss = agent.train()
       if i % 100 == 0:
         print('loss:', loss)
@@ -62,9 +66,7 @@ while agent.config['episodes_left']:
 
   crt_ep_reward = 0.0
 
-  new_eps = agent.config['eps'] * 0.99
-  agent.config['eps'] = max(new_eps, 0.05)
-  agent.config['episodes_left'] -= 1
+  agent.mark_episode()
 
-  if agent.config['episodes_left'] % 2 == 0:
+  if agent.config['episodes_left'] % 50 == 0:
     create_checkpoint(agent, loss_hist, avg_rewards, root_path)

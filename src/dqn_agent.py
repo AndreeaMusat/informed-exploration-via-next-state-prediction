@@ -1,11 +1,10 @@
-import dqn
 import agent
-import memory_replay
-import torch
+import dqn
 import gym
 import matplotlib.pyplot as plt
+import memory_replay
 import numpy as np
-from atari_wrappers import WarpFrame, FrameStack
+import torch
 
 
 class DQNAgent(agent.Agent):
@@ -17,7 +16,6 @@ class DQNAgent(agent.Agent):
     self.memory = memory_replay.MemoryReplay(self.config)
     self.opt = torch.optim.Adam(self.q_net.parameters(), 
                   self.config['learning_rate'])
-    self.img_idx = 0
 
   def act(self, state):
     state = np.array(state).transpose(2, 0, 1)[None, :] / 255.0
@@ -31,10 +29,16 @@ class DQNAgent(agent.Agent):
   def remember(self, curr_state, action, reward, next_state, done):
     self.memory.add(curr_state, action, reward, next_state, done)
 
+  def mark_episode(self):
+    new_eps = self.config['eps'] * self.config['eps_decay']
+    self.config['eps'] = max(new_eps, self.config['eps_min'])
+    self.config['episodes_left'] -= 1
+
   def train(self):
     batch = self.memory.sample(self.config['batch_size'])
     curr_states, actions, rewards, next_states, dones = batch
 
+    self.opt.zero_grad()
     curr_qs = self.q_net(curr_states)
     next_qs = self.q_net(next_states)
 
@@ -43,8 +47,6 @@ class DQNAgent(agent.Agent):
 
     target_qs = rewards + self.config['gamma'] * next_qs * (1 - dones)
     loss = (curr_qs - target_qs.detach()).pow(2).mean()
-
-    self.opt.zero_grad()
     loss.backward()
 
     self.opt.step()

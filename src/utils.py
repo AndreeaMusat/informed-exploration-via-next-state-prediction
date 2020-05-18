@@ -1,3 +1,4 @@
+import gym
 import os
 import sys
 import torch
@@ -5,22 +6,27 @@ import torch
 from dqn_agent import DQNAgent
 
 
-def get_default_config(num_actions):
+def get_default_config():
   input_shape = (4, 84, 84)
   config = {
     'batch_size': 32,
-    'capacity': 1000, 
-    'device': 'cpu',
+    'capacity': 25000, 
+    'device': 'cuda',
+    'env': 'Pong-v0',
     'episodes_left' : 10000,
     'eps': 0.9,
+    'eps_decay': 0.99,
+    'eps_min': 0.05,
     'gamma': 0.99,
     'img_idx': 0,
     'input_shape': input_shape, 
     'learning_rate': 0.001,
-    'num_actions': num_actions, 
     'total_episodes': 10000, 	      
   }
+  env = gym.make('Pong-v0')
 
+  config['num_actions'] = env.action_space.n
+  
   return config
 
 
@@ -63,11 +69,10 @@ def create_checkpoint(agent,
 def load_from_checkpoint(checkpoint_fname):
   checkpoint_dict = torch.load(checkpoint_fname)
 
-  config = checkpoint_dict['config']
-  agent = DQNAgent(config)
+  agent = DQNAgent(checkpoint_dict['config'])
   agent.q_net = checkpoint_dict['q_net']
   agent.memory.buffer = checkpoint_dict['buffer']
   loss_hist = checkpoint_dict['loss_hist']
   avg_rewards = checkpoint_dict['avg_rewards']
 
-  return config, agent, loss_hist, avg_rewards
+  return agent, loss_hist, avg_rewards
