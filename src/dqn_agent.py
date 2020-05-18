@@ -17,6 +17,7 @@ class DQNAgent(agent.Agent):
     self.memory = memory_replay.MemoryReplay(self.config)
     self.opt = torch.optim.Adam(self.q_net.parameters(), 
                   self.config['learning_rate'])
+    self.img_idx = 0
 
   def act(self, state):
     state = np.array(state).transpose(2, 0, 1)[None, :] / 255.0

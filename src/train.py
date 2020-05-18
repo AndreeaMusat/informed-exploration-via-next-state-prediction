@@ -1,36 +1,39 @@
 import gym
-import numpy
-from dqn_agent import DQNAgent
-from atari_wrappers import WarpFrame, FrameStack
-import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+import numpy
+import numpy as np
+import os
+import torch
+
+
+from atari_wrappers import wrap_deepmind
+from dqn_agent import DQNAgent
+from utils import *
+
+
+root_path = mount_drive()
 
 env = gym.make('Pong-v0')
-env = FrameStack(env, 4)
-
+env = wrap_deepmind(env, frame_stack=True, scale=True)
 num_actions = env.action_space.n
-input_shape = (4, 84, 84)
-
-
-config = {'capacity': 1000000, 'device': 'cpu', 'learning_rate': 0.001,
-       'eps': 1.0, 'num_actions': num_actions, 'batch_size': 32,
-       'input_shape': input_shape, 'gamma': 0.99}
-
+config = get_default_config(num_actions)
 agent = DQNAgent(config)
-
-obs = env.reset()
-eps = np.linspace(1.0, 0.1, 500000)
 
 crt_num_episodes = 0
 crt_ep_reward = 0.0
 total_rewards = 0.0
-num_episodes = 10000
 render = False
 
-for t in range(num_episodes):
-  obs = np.array(env.reset())
-  done = False
 
+loss_hist = []
+avg_rewards = []
+
+i = 0
+while agent.config['episodes_left']:
+  obs = np.array(env.reset())
+  
+  done = False
   while not done:
     if render:
       env.render()
@@ -39,21 +42,29 @@ for t in range(num_episodes):
     new_obs, reward, done, _ = env.step(action)
     new_obs = np.array(new_obs)
     agent.remember(obs, action, reward, new_obs, done)
+    
+    # fname = get_img_name(agent.config, action)
+    # matplotlib.image.imsave(fname, obs[:, :, 3])
+    
     obs = new_obs
-
-    print(obs.shape)
-
-    for i in range(4):
-      plt.imshow(obs.mean(axis=2))
-      plt.show()
-
     crt_ep_reward += reward
 
-  print(crt_ep_reward)
+    if len(agent.memory.buffer) >= 5000:
+      loss = agent.train()
+      if i % 100 == 0:
+        print('loss:', loss)
+    
+  print('eps:', agent.config['eps'])
+  print('rew:', crt_ep_reward)
+
+  loss_hist.append(agent.train())
+  avg_rewards.append(crt_ep_reward)
+
   crt_ep_reward = 0.0
 
-  print(len(agent.memory.buffer))
-  if len(agent.memory.buffer) >= 500000:
-    if t >= 300:
-      agent.config['eps'] = eps[t - 300]
-    print('Loss:', agent.train())
+  new_eps = agent.config['eps'] * 0.99
+  agent.config['eps'] = max(new_eps, 0.05)
+  agent.config['episodes_left'] -= 1
+
+  if agent.config['episodes_left'] % 2 == 0:
+    create_checkpoint(agent, loss_hist, avg_rewards, root_path)
