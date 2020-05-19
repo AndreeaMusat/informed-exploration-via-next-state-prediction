@@ -23,5 +23,13 @@ class QNetwork(nn.Module):
       nn.Linear(256, self.num_actions)
     )
 
+    for layer in self.features:
+      if hasattr(layer, 'weight'):
+        nn.init.kaiming_uniform_(layer.weight, mode='fan_in', nonlinearity='relu')
+    for layer in self.fc:
+      if hasattr(layer, 'weight'):
+        nn.init.kaiming_uniform_(layer.weight, mode='fan_in', nonlinearity='relu')
+
+
   def forward(self, X):
     return self.fc(self.features(X).view(X.shape[0], -1))
