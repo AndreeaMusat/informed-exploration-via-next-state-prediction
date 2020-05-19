@@ -11,7 +11,8 @@ from atari_wrappers import wrap_deepmind
 from dqn_agent import DQNAgent
 from utils import *
 
-root_path = mount_drive()
+# root_path = mount_drive()
+root_path = '.'
 
 restore_from_checkpoint = False
 if not restore_from_checkpoint:
@@ -19,10 +20,22 @@ if not restore_from_checkpoint:
   loss_hist = []
   avg_rewards = []
 else:
-  checkpoint_fname = 'TODO_checkpoint_file'
+  checkpoint_fname = os.path.join(root_path, 'my_checkpoints', '2.pth')  # TODO: change checkpoint if needed!!!!
   checkpoint = load_from_checkpoint(checkpoint_fname)
   agent, loss_hist, avg_rewards = checkpoint
+  
+  agent_code = int(agent.config['unique_name'][-4:]) + 1
+  agent_code_str = str(agent_code)
+  agent_code_str = "0" * (4 - len(agent_code_str)) + agent_code_str
+  agent.config['unique_name'] = 'agent' + str(agent_code)
 
+# data_dir = os.path.join(root_path, 'data', agent.config['unique_name'])
+# if not os.path.exists(data_dir):
+#   os.mkdir(data_dir)
+
+# checkpoint_dir = os.path.join(root_path, 'my_checkpoints')
+# if not os.path.exists(checkpoint_dir):
+  # os.mkdir(checkpoint_dir)
 
 env = wrap_deepmind(gym.make('Pong-v0'), 
                     frame_stack=True, 
@@ -53,7 +66,8 @@ while agent.config['episodes_left']:
     obs = new_obs
     crt_ep_reward += reward
 
-    if len(agent.memory.buffer) >= 50:
+    i += 1
+    if len(agent.memory.buffer) >= 500:
       loss = agent.train()
       if i % 100 == 0:
         print('loss:', loss)
@@ -68,5 +82,6 @@ while agent.config['episodes_left']:
 
   agent.mark_episode()
 
-  if agent.config['episodes_left'] % 50 == 0:
+  if agent.config['episodes_left'] % 10 == 0:
+    print('Wrote checkpoint!')
     create_checkpoint(agent, loss_hist, avg_rewards, root_path)
