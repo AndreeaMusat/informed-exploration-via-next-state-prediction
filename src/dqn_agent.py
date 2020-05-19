@@ -57,7 +57,7 @@ class DQNAgent(agent.Agent):
 
     target_qs = rewards + self.config['gamma'] * next_qs * (1 - dones)
     # loss = (curr_qs - target_qs.detach()).pow(2).mean()
-    loss = F.smooth_l1_loss(curr_qs, next_qs)
+    loss = F.smooth_l1_loss(curr_qs, target_qs.detach())
     self.opt.zero_grad()
     loss.backward()
 
