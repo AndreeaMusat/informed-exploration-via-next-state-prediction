@@ -165,13 +165,21 @@ class MazeDataset(torch.utils.data.Dataset):
         return len(self.frames_names)
 
 
+"""
+# Example usage.
 
-""" # Usage example:
+dataset = MazeDataset(root_dir='maze_data_cp')
+train_dataloader = torch.utils.data.DataLoader(
+    dataset=dataset, 
+    batch_size=2, 
+    shuffle=True, 
+    num_workers=0, 
+    drop_last=False,
+)
 
-ds = MazeDataset(root_dir='maze_data_cp')
-d = ds[1]
-print(d['curr_state'].shape)
-print(d['next_frame'].shape)
-
-
+for batch in train_dataloader:
+    print(batch['curr_state'].shape)
+    print(batch['action'].shape)
+    print(batch['next_frame'].shape)
+    break
 """
