@@ -41,7 +41,6 @@ class RandomImagination(Imagination):
         return np.random.choice(self.num_actions)
 
 
-
 class L1Imagination(Imagination):
     """Imagination module for a Q-Learning based agent."""
 
@@ -96,8 +95,7 @@ class L1Imagination(Imagination):
 
     def update(self, stacked_frames):
         self._memory.append(self.preprocess_frame(stacked_frames[-1]))
-
-        
+   
     def get_action(self, stacked_frames):
         actions = torch.Tensor(np.eye(self.num_actions))
         actions.to(self.device)
