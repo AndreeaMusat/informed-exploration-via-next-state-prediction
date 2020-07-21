@@ -23,7 +23,7 @@ def natural_keys(text):
 class MazeDataset(torch.utils.data.Dataset):
 
     def __init__(self, root_dir, transform=None, mode='train', in_memory=False,
-        num_stack=4, num_actions=4, splits = {'train' : 0.6, 'valid' : 0.2, 'test' : 0.2}):
+        num_stack=4, num_actions=4, splits = {'train' : 0.6, 'valid' : 0.2, 'test' : 0.2}, rgb=False):
         """Initialize a train/valid/test MazeDataset.
         """
         self.mode = mode
@@ -35,6 +35,7 @@ class MazeDataset(torch.utils.data.Dataset):
         self.frames_paths = self.select_split(
             self.read_dir(root_dir)
         )
+        self.rgb = rgb
         
         # If in_memory=True, then store the images we read here.
         self.frames = {}
@@ -133,18 +134,18 @@ class MazeDataset(torch.utils.data.Dataset):
             the black and white pixel values of the frame.
         """
         img = Image.open(frame_path)
-        
-#         Normalize beween 0 and 1.
-#         img = np.array(img).astype(float) / 255.0
-        
-        # Normalize between -1 and 1
-        img = np.array(img).astype(float) / (255 / 2)
-        img -= 1
-    
+        img = np.array(img).astype(float) / 255.0
+      
+ 
+        if self.rgb:
+            img = color.rgba2rgb(img)
+            img = 2 * (img - img.min()) / (img.max() - img.min()) - 1
+            
         if len(img.shape) == 3:
             img = color.rgb2gray(img)
             img = cv2.resize(img, (64, 64), interpolation=cv2.INTER_AREA)
-        
+            img = (img - 0.65491969107) / 0.2275179
+
         if self.transform is not None:
             img = self.transform(img)
 
@@ -195,8 +196,14 @@ class MazeDataset(torch.utils.data.Dataset):
                 self.frames[frame_path] = frame
             else:
                 frame = self.frames[frame_path]
-             
-            data_dict['curr_state'].append(frame)
+           
+            if self.rgb:
+                if len(data_dict['curr_state']) == 0:
+                    data_dict['curr_state'] = frame
+                else:
+                    data_dict['curr_state'] = np.vstack((data_dict['curr_state'], frame)) 
+            else:
+                data_dict['curr_state'].append(frame)
 
         # Load the next frame.
         next_frame_path = self.get_frame_path(last_frame_dir, last_frame_num + 1)
@@ -208,23 +215,25 @@ class MazeDataset(torch.utils.data.Dataset):
         else:
             next_frame = self.frames[next_frame_path]
 
-        data_dict['next_frame'] = next_frame[None, :]
+        if len(next_frame.shape) == 2: 
+            data_dict['next_frame'] = next_frame[None, :]
+        else:
+            data_dict['next_frame'] = next_frame
+
         one_hot_action = np.zeros(self.num_actions)
         one_hot_action[action_num] = 1
         data_dict['action'] = one_hot_action
+
+        # Add noise on the frames.
         data_dict['curr_state'] = np.array(data_dict['curr_state'])
-
-        # Add noise on the previous frames.
-        data_dict['curr_state'] +=  np.random.normal(0, 0.05, data_dict['curr_state'].shape)
-
-        data_dict['weights'] = np.ones_like(data_dict['next_frame'])
+        data_dict['curr_state'] += np.random.normal(0, 0.04, data_dict['curr_state'].shape)
+        data_dict['next_frame'] += np.random.normal(0, 0.04, data_dict['next_frame'].shape)
+      
+        data_dict['curr_state'] = np.clip(data_dict['curr_state'], 0, 1)
+        data_dict['next_frame'] = np.clip(data_dict['next_frame'], 0, 1)
         
-#         data_dict['weights'] = np.abs(data_dict['curr_state'][-1] - data_dict['next_frame'])
-#         data_dict['weights'][data_dict['weights'] > 0] = 4500
-#         data_dict['weights'][data_dict['weights'] == 0] = 35.0        
-#         from scipy import ndimage
-#         data_dict['weights'] = ndimage.gaussian_filter(data_dict['weights'], sigma=5)
-#         data_dict['weights'] = ndimage.gaussian_filter(data_dict['weights'], sigma=3)
+        # Put weights on the pixels if needed.
+        data_dict['weights'] = np.ones_like(data_dict['next_frame'])
 
         return data_dict
 
